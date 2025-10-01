@@ -1,0 +1,13 @@
+[project]
+name = "manappuram-voice-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.1.2",
+    "gradio>=5.47.2",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "requests>=2.32.5",
+]
