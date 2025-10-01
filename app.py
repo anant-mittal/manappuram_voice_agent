@@ -102,7 +102,8 @@ def vapi_webhook():
         customer_row = df_customers[df_customers['Phone'] == phone_number]
         name = customer_row['Name'].values[0] if not customer_row.empty else 'Unknown'
         language = customer_row['Language'].values[0] if not customer_row.empty else 'en'
-    except:
+    except Exception as e:
+        print(f"❌ Error in reading input excel: {str(e)}")
         name = 'Unknown'
         language = 'en'
     
