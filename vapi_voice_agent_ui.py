@@ -44,7 +44,7 @@ def trigger_calls(file):
 
                 },
                 
-                
+                "serverUrl": "https://manappuram-voice-agent.onrender.com/vapi-webhook",
                 "firstMessage": message,
                 "silenceTimeoutSeconds": 30,
                 "endCallMessage": " ",
