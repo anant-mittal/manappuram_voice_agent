@@ -127,6 +127,8 @@ def vapi_webhook():
         duration = message.get('durationSeconds', 0)  # in seconds
         cost = message.get('cost', 0)
         started_at = message.get('startedAt')
+        print('json start time ', message.get('startedAt'))
+        print('call start time ', started_at)
         ended_at = message.get('endedAt')
     
         log_call_status(
