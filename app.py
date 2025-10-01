@@ -60,7 +60,7 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
                 'call_id': call_id,
                 'status': status,
                 'duration_seconds': duration_seconds,
-                'call_start_time': call_start_time or datetime.now().isoformat(),
+                'call_start_time': call_start_time,
                 'call_end_time': call_end_time,
                 'cost': cost,
                 'error_message': error_message,
@@ -99,7 +99,10 @@ def vapi_webhook():
 
     
     df_customers = pd.read_excel(EXCEL_FILE, engine='openpyxl')
-    customer_row = df_customers[df_customers['Phone'] == phone_number]
+    df_customers['Phone'] = df_customers['Phone'].astype(str).str.strip()
+    phn = phone_number[1:]
+    customer_row = df_customers[df_customers['Phone'] == phn]
+
     name = customer_row['Name'].values[0] if not customer_row.empty else 'Unknown'
     language = customer_row['Language'].values[0] if not customer_row.empty else 'en'
 
@@ -123,9 +126,9 @@ def vapi_webhook():
         ended_reason = message.get('endedReason', 'completed')
         duration = message.get('durationSeconds', 0)  # in seconds
         cost = message.get('cost', 0)
-        started_at = call.get('startedAt')
-        ended_at = call.get('endedAt')
-        
+        started_at = message.get('startedAt')
+        ended_at = message.get('endedAt')
+    
         log_call_status(
             name=name,
             phone_number=phone_number,
