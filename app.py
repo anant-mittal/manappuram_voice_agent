@@ -8,45 +8,75 @@ app = Flask(__name__)
 EXCEL_FILE = "vapi.xlsx"
 OUTPUT_EXCEL = "call_status_log.xlsx"
 
+# Initialize output Excel if it doesn't exist
+def initialize_output_excel():
+    if not os.path.exists(OUTPUT_EXCEL):
+        df = pd.DataFrame(columns=[
+            'name', 'phone_number', 'language', 'call_id', 'status', 
+            'duration_seconds', 'call_start_time', 'call_end_time',
+            'cost', 'error_message', 'timestamp'
+        ])
+        df.to_excel(OUTPUT_EXCEL, index=False, engine='openpyxl')
+        print(f"✓ Created new Excel file: {OUTPUT_EXCEL}")
+
 def log_call_status(name, phone_number, language, call_id, status, duration_seconds=0, 
                     call_start_time=None, call_end_time=None, cost=None, error_message=None):
     """Append or update call status in Excel"""
     
     # Read existing data
-    df = pd.read_excel(OUTPUT_EXCEL)
+    #df = pd.read_excel(OUTPUT_EXCEL)
+    try:
+        # Read existing data or create new DataFrame
+        if os.path.exists(OUTPUT_EXCEL) and os.path.getsize(OUTPUT_EXCEL) > 0:
+            df = pd.read_excel(OUTPUT_EXCEL, engine='openpyxl')
+        else:
+            # File doesn't exist or is empty, create new DataFrame
+            df = pd.DataFrame(columns=[
+                'name', 'phone_number', 'language', 'call_id', 'status', 
+                'duration_seconds', 'call_start_time', 'call_end_time',
+                'cost', 'error_message', 'timestamp'
+            ])
     
-    # Check if this call_id already exists (for updates)
-    if call_id != 'N/A' and call_id in df['call_id'].values:
-        # Update existing record
-        idx = df[df['call_id'] == call_id].index[0]
-        df.at[idx, 'status'] = status
-        if duration_seconds:
-            df.at[idx, 'duration_seconds'] = duration_seconds
-        if call_end_time:
-            df.at[idx, 'call_end_time'] = call_end_time
-        if cost:
-            df.at[idx, 'cost'] = cost
-        df.at[idx, 'timestamp'] = datetime.now().isoformat()
-    else:
-        # Create new record
-        new_row = {
-            'name': name,
-            'phone_number': phone_number,
-            'language': language,
-            'call_id': call_id,
-            'status': status,
-            'duration_seconds': duration_seconds,
-            'call_start_time': call_start_time or datetime.now().isoformat(),
-            'call_end_time': call_end_time,
-            'cost': cost,
-            'error_message': error_message,
-            'timestamp': datetime.now().isoformat()
-        }
-        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        # Check if this call_id already exists (for updates)
+        if call_id != 'N/A' and call_id in df['call_id'].values:
+            # Update existing record
+            idx = df[df['call_id'] == call_id].index[0]
+            df.at[idx, 'status'] = status
+            if duration_seconds:
+                df.at[idx, 'duration_seconds'] = duration_seconds
+            if call_end_time:
+                df.at[idx, 'call_end_time'] = call_end_time
+            if cost:
+                df.at[idx, 'cost'] = cost
+            df.at[idx, 'timestamp'] = datetime.now().isoformat()
+        else:
+            # Create new record
+            new_row = {
+                'name': name,
+                'phone_number': phone_number,
+                'language': language,
+                'call_id': call_id,
+                'status': status,
+                'duration_seconds': duration_seconds,
+                'call_start_time': call_start_time or datetime.now().isoformat(),
+                'call_end_time': call_end_time,
+                'cost': cost,
+                'error_message': error_message,
+                'timestamp': datetime.now().isoformat()
+            }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     
-    # Save to Excel
-    df.to_excel(OUTPUT_EXCEL, index=False)
-    print(f"📊 Updated Excel: {name} - Status: {status}")
+        # Save to Excel
+        df.to_excel(OUTPUT_EXCEL, index=False)
+        print(f"📊 Updated Excel: {name} - Status: {status}")
+
+    except Exception as e:
+        print(f"❌ Error logging call status: {str(e)}")
+        # Re-initialize the Excel file if there's an error
+        initialize_output_excel()
+        # Try again
+        log_call_status(name, phone_number, language, call_id, status, duration_seconds, 
+                       call_start_time, call_end_time, cost, error_message)
 
 @app.route("/", methods=["GET"])
 def index():
