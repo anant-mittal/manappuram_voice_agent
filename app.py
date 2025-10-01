@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import pandas as pd
-import datetime
+from datetime import datetime
 import os
 
 # Flask app instance
