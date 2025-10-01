@@ -28,8 +28,10 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
     try:
         # Read existing data or create new DataFrame
         if os.path.exists(OUTPUT_EXCEL) and os.path.getsize(OUTPUT_EXCEL) > 0:
+            print('Inside if block of log_call_status')
             df = pd.read_excel(OUTPUT_EXCEL, engine='openpyxl')
         else:
+            print('Inside else block of log_call_status')
             # File doesn't exist or is empty, create new DataFrame
             df = pd.DataFrame(columns=[
                 'name', 'phone_number', 'language', 'call_id', 'status', 
@@ -85,9 +87,6 @@ def index():
 
 @app.route("/vapi-webhook", methods=["POST"])
 def vapi_webhook():
-    df = pd.read_excel('vapi.xlsx')
-    
-    results = []
     data = request.json
     message = data.get('message', {})
     print("Webhook received:", data)  # log to Render logs
@@ -99,7 +98,7 @@ def vapi_webhook():
     event_type = data.get('message', {}).get('type')
 
     try:
-        df_customers = pd.read_excel('vapi.xlsx')
+        df_customers = pd.read_excel(EXCEL_FILE, engine='openpyxl')
         customer_row = df_customers[df_customers['Phone'] == phone_number]
         name = customer_row['Name'].values[0] if not customer_row.empty else 'Unknown'
         language = customer_row['Language'].values[0] if not customer_row.empty else 'en'
@@ -124,8 +123,8 @@ def vapi_webhook():
         
     elif event_type == 'end-of-call-report':
         ended_reason = message.get('endedReason', 'completed')
-        duration = call.get('duration', 0)  # in seconds
-        cost = call.get('cost', 0)
+        duration = message.get('durationSeconds', 0)  # in seconds
+        cost = message.get('cost', 0)
         started_at = call.get('startedAt')
         ended_at = call.get('endedAt')
         
