@@ -9,6 +9,7 @@ WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
 #app = Flask(__name__)
 app = Flask(__name__, static_folder="static", template_folder="templates")
+
 API_KEY = "0a4d8aad-ddad-4a47-9484-9c64843f59ff"
 PHONE_NUMBER_ID = "80db5c92-ebf7-4bfd-afc9-615c50ada458"
 EXCEL_FILE = "vapi.xlsx"
@@ -147,7 +148,11 @@ def trigger_calls_ui():
     file = request.files.get("file")
     if not file:
         return render_template("index.html", result="❌ No file uploaded")
-    results = trigger_calls(file)
+    df = pd.read_excel(file, dtype=str)
+    #df["Phone"] = df["Phone"].astype(str).str.strip().str.replace("+", "", regex=False)
+    df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
+
+    results = trigger_calls(EXCEL_FILE)
     print('Result of trigger calls api ', results)
     return render_template("index.html", result="\n".join(results))
 
