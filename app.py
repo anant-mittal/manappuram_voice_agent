@@ -148,6 +148,7 @@ def trigger_calls_ui():
     if not file:
         return render_template("index.html", result="❌ No file uploaded")
     results = trigger_calls(file)
+    print('Result od trigger calls api ', results)
     return render_template("index.html", result="\n".join(results))
 
 @app.route("/vapi-webhook", methods=["POST"])
