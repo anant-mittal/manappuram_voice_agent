@@ -6,6 +6,102 @@ from gradio.routes import mount_gradio_app
 import gradio as gr
 from config import messages
 import requests
+from flask import render_template_string
+
+# ==============================
+# HTML + Flask UI
+# ==============================
+
+HTML_PAGE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📞 EMI Reminder Voice Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f6fa;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 700px;
+            margin: 40px auto;
+            background: white;
+            padding: 25px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #0077b6;
+        }
+        form {
+            margin-top: 30px;
+            text-align: center;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+            padding: 8px;
+        }
+        button {
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #0096c7;
+        }
+        .output {
+            margin-top: 30px;
+            background: #eef7fb;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        a.download {
+            display: inline-block;
+            margin-top: 15px;
+            background: #00b4d8;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+        a.download:hover {
+            background: #0077b6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📞 EMI Reminder Voice Agent</h1>
+        <p>Upload an Excel file with columns: <b>Phone</b> and <b>Language</b>.</p>
+        <form action="/trigger-calls" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".xlsx" required><br>
+            <button type="submit">Trigger Calls</button>
+        </form>
+
+        {% if result %}
+            <div class="output">
+                <h3>Logs:</h3>
+                <pre>{{ result }}</pre>
+                <a href="/download-report" class="download">📥 Download Call Status Excel</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+"""
 
 # Flask app instance
 app = Flask(__name__)
@@ -149,8 +245,16 @@ def trigger_calls(file):
 
 @app.route("/", methods=["GET"])
 def index():
-    return "Webhook server is running 🚀"
+    return render_template_string(HTML_PAGE)
 
+
+@app.route("/trigger-calls", methods=["POST"])
+def trigger_calls_ui():
+    file = request.files.get("file")
+    if not file:
+        return render_template_string(HTML_PAGE, result="❌ No file uploaded")
+    results = trigger_calls(file)
+    return render_template_string(HTML_PAGE, result="\n".join(results))
 
 @app.route("/vapi-webhook", methods=["POST"])
 def vapi_webhook():
@@ -243,31 +347,6 @@ def download_report():
         return jsonify({"error": str(e)}), 500
 
 
-# Build Gradio interface
-with gr.Blocks() as demo:
-    gr.Markdown("## 📞 EMI Reminder Voice Agent")
-    gr.Markdown("Upload an Excel sheet with columns: **Phone, Language**")
-
-    file_input = gr.File(label="Upload Excel", file_types=[".xlsx"])
-    output_box = gr.Textbox(label="Logs", lines=15)
-    run_button = gr.Button("Trigger Calls")
-    download_button = gr.Button("📥 Download Call Status Report")
-    #download_link = gr.File(label="Download Updated Excel")
-
-    run_button.click(trigger_calls, inputs=file_input, outputs=output_box)
-
-    # Download from Flask endpoint
-    def get_download_link():
-        return f"{VAPI_WEBHOOK_URL.replace('/vapi-webhook', '')}/download-report"
-
-    download_link_text = gr.Textbox(label="Download Link", interactive=False)
-
-    download_button.click(fn=get_download_link, inputs=None, outputs=download_link_text)
-    gr.Markdown("After clicking the button, copy the link above or click below to download:")
-    gr.HTML(f'<a href="/download-report" target="_blank"><button style="padding:10px">Download Excel</button></a>')
-
-# Mount Gradio inside Flask
-app = mount_gradio_app(app, demo, path="/ui")
 
 # Only needed for local testing
 if __name__ == "__main__":
