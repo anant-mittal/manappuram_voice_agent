@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📞 EMI Reminder Voice Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>📞 EMI Reminder Voice Agent</h1>
+        <p>Upload an Excel file with columns: <b>Name</b> <b>,</b> <b>Phone</b> and <b>Language</b>.</p>
+        <form action="/trigger-calls" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".xlsx" required><br>
+            <button type="submit">Trigger Calls</button>
+        </form>
+
+        {% if result %}
+            <div class="output">
+                <h3>Logs:</h3>
+                <div class="log-box">{{ result | replace('\n', '<br>') | safe }}</div>
+                <a href="/download-report" class="download">📥 Download Call Status Excel</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

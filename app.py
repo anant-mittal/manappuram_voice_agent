@@ -1,10 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 import pandas as pd
 from datetime import datetime
 import os
-from gradio.routes import mount_gradio_app
-import gradio as gr
-from config import messages
+from config import messages, language_map
 import requests
 from flask import render_template_string
 
@@ -12,107 +10,108 @@ from flask import render_template_string
 # HTML + Flask UI
 # ==============================
 
-HTML_PAGE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>📞 EMI Reminder Voice Agent</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f6fa;
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            width: 90%;
-            max-width: 700px;
-            margin: 40px auto;
-            background: white;
-            padding: 25px 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #0077b6;
-        }
-        form {
-            margin-top: 30px;
-            text-align: center;
-        }
-        input[type="file"] {
-            margin: 20px 0;
-            padding: 8px;
-        }
-        button {
-            background-color: #0077b6;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px;
-        }
-        button:hover {
-            background-color: #0096c7;
-        }
-        .output {
-            margin-top: 30px;
-            background: #eef7fb;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-        .log-box {
-            background: #eef7fb;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-        a.download {
-            display: inline-block;
-            margin-top: 15px;
-            background: #00b4d8;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 8px;
-        }
-        a.download:hover {
-            background: #0077b6;
-        }
+# HTML_PAGE = """
+# <!DOCTYPE html>
+# <html lang="en">
+# <head>
+#     <meta charset="UTF-8">
+#     <title>📞 EMI Reminder Voice Agent</title>
+#     <style>
+#         body {
+#             font-family: Arial, sans-serif;
+#             background-color: #f5f6fa;
+#             color: #333;
+#             margin: 0;
+#             padding: 0;
+#         }
+#         .container {
+#             width: 90%;
+#             max-width: 700px;
+#             margin: 40px auto;
+#             background: white;
+#             padding: 25px 40px;
+#             border-radius: 12px;
+#             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+#         }
+#         h1 {
+#             text-align: center;
+#             color: #0077b6;
+#         }
+#         form {
+#             margin-top: 30px;
+#             text-align: center;
+#         }
+#         input[type="file"] {
+#             margin: 20px 0;
+#             padding: 8px;
+#         }
+#         button {
+#             background-color: #0077b6;
+#             color: white;
+#             border: none;
+#             border-radius: 8px;
+#             padding: 10px 20px;
+#             cursor: pointer;
+#             font-size: 16px;
+#             margin: 10px;
+#         }
+#         button:hover {
+#             background-color: #0096c7;
+#         }
+#         .output {
+#             margin-top: 30px;
+#             background: #eef7fb;
+#             border-radius: 8px;
+#             padding: 15px;
+#             font-family: monospace;
+#             white-space: pre-wrap;
+#         }
+#         .log-box {
+#             background: #eef7fb;
+#             border-radius: 8px;
+#             padding: 15px;
+#             font-family: monospace;
+#             white-space: pre-wrap;
+#         }
+#         a.download {
+#             display: inline-block;
+#             margin-top: 15px;
+#             background: #00b4d8;
+#             color: white;
+#             padding: 10px 20px;
+#             text-decoration: none;
+#             border-radius: 8px;
+#         }
+#         a.download:hover {
+#             background: #0077b6;
+#         }
 
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📞 EMI Reminder Voice Agent</h1>
-        <p>Upload an Excel file with columns: <b>Phone</b> and <b>Language</b>.</p>
-        <form action="/trigger-calls" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".xlsx" required><br>
-            <button type="submit">Trigger Calls</button>
-        </form>
+#     </style>
+# </head>
+# <body>
+#     <div class="container">
+#         <h1>📞 EMI Reminder Voice Agent</h1>
+#         <p>Upload an Excel file with columns: <b>Phone</b> and <b>Language</b>.</p>
+#         <form action="/trigger-calls" method="post" enctype="multipart/form-data">
+#             <input type="file" name="file" accept=".xlsx" required><br>
+#             <button type="submit">Trigger Calls</button>
+#         </form>
 
-        {% if result %}
-            <div class="output">
-                <h3>Logs:</h3>
-                <div class="log-box">{{ result | replace('\n', '<br>') | safe }}</div>
-                <a href="/download-report" class="download">📥 Download Call Status Excel</a>
-            </div>
-        {% endif %}
-    </div>
-</body>
-</html>
-"""
+#         {% if result %}
+#             <div class="output">
+#                 <h3>Logs:</h3>
+#                 <div class="log-box">{{ result | replace('\n', '<br>') | safe }}</div>
+#                 <a href="/download-report" class="download">📥 Download Call Status Excel</a>
+#             </div>
+#         {% endif %}
+#     </div>
+# </body>
+# </html>
+# """
 
 # Flask app instance
-app = Flask(__name__)
+#app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")
 API_KEY = "0a4d8aad-ddad-4a47-9484-9c64843f59ff"
 PHONE_NUMBER_ID = "80db5c92-ebf7-4bfd-afc9-615c50ada458"
 EXCEL_FILE = "vapi.xlsx"
@@ -244,8 +243,8 @@ def trigger_calls(file):
 
         # Save call status in Excel
         df.loc[idx, "CallStatus"] = f"{status_code} | {resp_json.get('status', resp_json.get('message', 'Unknown'))}"
-
-        result = f"Called {customer_number} in {language}: {response.status_code}"
+        language_name = language_map.get(language, "en")
+        result = f"Called {customer_number} in {language_name}: {response.status_code}"
         results.append(result)
 
     return results
@@ -253,16 +252,16 @@ def trigger_calls(file):
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template_string(HTML_PAGE)
+    return render_template("index.html")
 
 
 @app.route("/trigger-calls", methods=["POST"])
 def trigger_calls_ui():
     file = request.files.get("file")
     if not file:
-        return render_template_string(HTML_PAGE, result="❌ No file uploaded")
+        return render_template("index.html", result="❌ No file uploaded")
     results = trigger_calls(file)
-    return render_template_string(HTML_PAGE, result="\n".join(results))
+    return render_template("index.html", result=results)
 
 @app.route("/vapi-webhook", methods=["POST"])
 def vapi_webhook():
