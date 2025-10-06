@@ -168,9 +168,11 @@ def vapi_webhook():
 
     
     df_customers = pd.read_excel(EXCEL_FILE, engine='openpyxl')
+    print('df_customers ', df_customers)
     df_customers['Phone'] = df_customers['Phone'].astype(str).str.strip()
-    phn = phone_number[1:]
     print('Phone num from excel sheet ', df_customers['Phone'])
+    phn = phone_number[1:]
+    
     print('Phone num from vapi ', phn)
     customer_row = df_customers[df_customers['Phone'] == phn]
     
