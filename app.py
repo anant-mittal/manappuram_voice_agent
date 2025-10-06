@@ -4,7 +4,8 @@ from datetime import datetime
 import os
 from config import messages, language_map
 import requests
-
+import secrets
+WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
 #app = Flask(__name__)
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -14,17 +15,6 @@ EXCEL_FILE = "vapi.xlsx"
 OUTPUT_EXCEL = "call_status_log.xlsx"
 url = "https://api.vapi.ai/call"
 VAPI_WEBHOOK_URL = "https://manappuram-voice-agent.onrender.com/vapi-webhook"
-
-# Initialize output Excel if it doesn't exist
-# def initialize_output_excel():
-#     if not os.path.exists(OUTPUT_EXCEL):
-#         df = pd.DataFrame(columns=[
-#             'name', 'phone_number', 'language', 'call_id', 'status', 
-#             'duration_seconds', 'call_start_time', 'call_end_time',
-#             'cost', 'error_message', 'timestamp'
-#         ])
-#         df.to_excel(OUTPUT_EXCEL, index=False, engine='openpyxl')
-#         print(f"✓ Created new Excel file: {OUTPUT_EXCEL}")
 
 def log_call_status(name, phone_number, language, call_id, status, duration_seconds=0, 
                     call_start_time=None, call_end_time=None, cost=None, error_message=None):
@@ -124,6 +114,7 @@ def trigger_calls(file):
                 },
                 
                 "serverUrl": "https://manappuram-voice-agent.onrender.com/vapi-webhook",
+                "serverUrlSecret": WEBHOOK_SECRET,
                 "firstMessage": message,
                 "silenceTimeoutSeconds": 30,
                 "endCallMessage": " ",
@@ -161,6 +152,9 @@ def trigger_calls_ui():
 
 @app.route("/vapi-webhook", methods=["POST"])
 def vapi_webhook():
+    received_secret = request.headers.get('x-vapi-secret')
+    if received_secret != WEBHOOK_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
     data = request.json
     message = data.get('message', {})
     print("Webhook received:", data)  # log to Render logs
