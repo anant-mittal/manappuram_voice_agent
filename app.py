@@ -148,7 +148,7 @@ def trigger_calls_ui():
     if not file:
         return render_template("index.html", result="❌ No file uploaded")
     results = trigger_calls(file)
-    print('Result od trigger calls api ', results)
+    print('Result of trigger calls api ', results)
     return render_template("index.html", result="\n".join(results))
 
 @app.route("/vapi-webhook", methods=["POST"])
@@ -170,8 +170,11 @@ def vapi_webhook():
     df_customers = pd.read_excel(EXCEL_FILE, engine='openpyxl')
     df_customers['Phone'] = df_customers['Phone'].astype(str).str.strip()
     phn = phone_number[1:]
+    print('Phone num from excel sheet ', df_customers['Phone'])
+    print('Phone num from vapi ', phn)
     customer_row = df_customers[df_customers['Phone'] == phn]
-
+    
+    print('customer data ', customer_row)
     name = customer_row['Name'].values[0] if not customer_row.empty else 'Unknown'
     language = customer_row['Language'].values[0] if not customer_row.empty else 'en'
 
