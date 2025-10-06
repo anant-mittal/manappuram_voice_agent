@@ -1,13 +1,13 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
-from datetime import datetime
 import os
 from config import messages, language_map
 import requests
 import secrets
+from datetime import datetime, timezone, timedelta
+
 WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
-#app = Flask(__name__)
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
 API_KEY = "0a4d8aad-ddad-4a47-9484-9c64843f59ff"
@@ -16,6 +16,22 @@ EXCEL_FILE = "vapi.xlsx"
 OUTPUT_EXCEL = "call_status_log.xlsx"
 url = "https://api.vapi.ai/call"
 VAPI_WEBHOOK_URL = "https://manappuram-voice-agent.onrender.com/vapi-webhook"
+
+def convert_to_ist(utc_time_str):
+    """Convert ISO 8601 UTC timestamp (from VAPI) to IST (UTC+5:30)."""
+    if not utc_time_str:
+        return None
+    try:
+        # Parse and ensure timezone awareness
+        dt_utc = datetime.fromisoformat(utc_time_str.replace("Z", "+00:00"))
+        # Convert to IST
+        ist = timezone(timedelta(hours=5, minutes=30))
+        dt_ist = dt_utc.astimezone(ist)
+        return dt_ist.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception as e:
+        print(f"⚠️ Timestamp parse error ({utc_time_str}): {e}")
+        return utc_time_str  # fallback to raw value
+
 
 def log_call_status(name, phone_number, language, call_id, status, duration_seconds=0, 
                     call_start_time=None, call_end_time=None, cost=None, error_message=None):
@@ -34,7 +50,7 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
             df = pd.DataFrame(columns=[
                 'name', 'phone_number', 'language', 'call_id', 'status', 
                 'duration_seconds', 'call_start_time', 'call_end_time',
-                'cost', 'error_message', 'timestamp'
+                'cost', 'error_message'
             ])
     
         # Check if this call_id already exists (for updates)
@@ -50,7 +66,6 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
                 df.at[idx, 'call_end_time'] = call_end_time
             if cost:
                 df.at[idx, 'cost'] = cost
-            df.at[idx, 'timestamp'] = datetime.now().isoformat()
         else:
             # Create new record
             new_row = {
@@ -63,8 +78,7 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
                 'call_start_time': call_start_time,
                 'call_end_time': call_end_time,
                 'cost': cost,
-                'error_message': error_message,
-                'timestamp': datetime.now().isoformat()
+                'error_message': error_message
             }
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     
@@ -148,6 +162,11 @@ def trigger_calls_ui():
     file = request.files.get("file")
     if not file:
         return render_template("index.html", result="❌ No file uploaded")
+    
+    # ✅ Remove old call log
+    if os.path.exists(OUTPUT_EXCEL):
+        os.remove(OUTPUT_EXCEL)
+    
     df = pd.read_excel(file, dtype=str)
     #df["Phone"] = df["Phone"].astype(str).str.strip().str.replace("+", "", regex=False)
     df.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
@@ -170,18 +189,12 @@ def vapi_webhook():
     customer = call.get('customer', {})
     phone_number = customer.get('number', 'Unknown')
     event_type = data.get('message', {}).get('type')
-
     
     df_customers = pd.read_excel(EXCEL_FILE, engine='openpyxl')
-    print('df_customers ', df_customers)
     df_customers['Phone'] = df_customers['Phone'].astype(str).str.strip()
-    print('Phone num from excel sheet ', df_customers['Phone'])
     phn = phone_number[1:]
-    
-    print('Phone num from vapi ', phn)
     customer_row = df_customers[df_customers['Phone'] == phn]
     
-    print('customer data ', customer_row)
     name = customer_row['Name'].values[0] if not customer_row.empty else 'Unknown'
     language = customer_row['Language'].values[0] if not customer_row.empty else 'en'
 
@@ -190,7 +203,7 @@ def vapi_webhook():
     if event_type == 'status-update':
         print('Inside event type status update')
         status = message.get('status')
-        call_start_time = message.get('startedAt')
+        call_start_time = convert_to_ist(message.get('startedAt'))
         
         log_call_status(
             name=name,
@@ -203,14 +216,13 @@ def vapi_webhook():
 
         
     elif event_type == 'end-of-call-report':
-        print('Inside even type end of call report')
+        print('Inside event type end of call report')
         ended_reason = message.get('endedReason', 'completed')
         duration = message.get('durationSeconds', 0)  # in seconds
         cost = message.get('cost', 0)
-        started_at = message.get('startedAt')
-        print('json start time ', message.get('startedAt'))
+        started_at = convert_to_ist(message.get('startedAt'))
         print('call start time ', started_at)
-        ended_at = message.get('endedAt')
+        ended_at = convert_to_ist(message.get('endedAt'))
     
         log_call_status(
             name=name,
@@ -235,7 +247,6 @@ def vapi_webhook():
                 call_id=call_id,
                 status='ending'
             )
-    # You can later add Excel update code here
     return jsonify({"ok": True}), 200
 
 # Route to download call status Excel file
@@ -243,8 +254,6 @@ def vapi_webhook():
 def download_report():
     """Download the call status log Excel file"""
     try:
-        from flask import send_file
-        
         if not os.path.exists(OUTPUT_EXCEL):
             return jsonify({"error": "No call status log found"}), 404
         
