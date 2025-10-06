@@ -187,7 +187,7 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
                        call_start_time, call_end_time, cost, error_message)
         
 def trigger_calls(file):
-    df = pd.read_excel(file.name)
+    df = pd.read_excel(file)
     results = []
 
     for idx, row in df.iterrows():
