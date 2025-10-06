@@ -177,6 +177,7 @@ def vapi_webhook():
     
     # Handle different event types
     if event_type == 'status-update':
+        print('Inside event type status update')
         status = message.get('status')
         call_start_time = message.get('startedAt')
         
@@ -191,6 +192,7 @@ def vapi_webhook():
 
         
     elif event_type == 'end-of-call-report':
+        print('Inside even type end of call report')
         ended_reason = message.get('endedReason', 'completed')
         duration = message.get('durationSeconds', 0)  # in seconds
         cost = message.get('cost', 0)
@@ -212,6 +214,7 @@ def vapi_webhook():
         )
     elif event_type == 'function-call':
         # Log when endCall is triggered
+        print('Inside enent type function call')
         function_name = message.get('functionCall', {}).get('name')
         if function_name == 'endCall':
             log_call_status(
