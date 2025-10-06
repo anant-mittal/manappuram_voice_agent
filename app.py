@@ -4,110 +4,6 @@ from datetime import datetime
 import os
 from config import messages, language_map
 import requests
-from flask import render_template_string
-
-# ==============================
-# HTML + Flask UI
-# ==============================
-
-# HTML_PAGE = """
-# <!DOCTYPE html>
-# <html lang="en">
-# <head>
-#     <meta charset="UTF-8">
-#     <title>📞 EMI Reminder Voice Agent</title>
-#     <style>
-#         body {
-#             font-family: Arial, sans-serif;
-#             background-color: #f5f6fa;
-#             color: #333;
-#             margin: 0;
-#             padding: 0;
-#         }
-#         .container {
-#             width: 90%;
-#             max-width: 700px;
-#             margin: 40px auto;
-#             background: white;
-#             padding: 25px 40px;
-#             border-radius: 12px;
-#             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-#         }
-#         h1 {
-#             text-align: center;
-#             color: #0077b6;
-#         }
-#         form {
-#             margin-top: 30px;
-#             text-align: center;
-#         }
-#         input[type="file"] {
-#             margin: 20px 0;
-#             padding: 8px;
-#         }
-#         button {
-#             background-color: #0077b6;
-#             color: white;
-#             border: none;
-#             border-radius: 8px;
-#             padding: 10px 20px;
-#             cursor: pointer;
-#             font-size: 16px;
-#             margin: 10px;
-#         }
-#         button:hover {
-#             background-color: #0096c7;
-#         }
-#         .output {
-#             margin-top: 30px;
-#             background: #eef7fb;
-#             border-radius: 8px;
-#             padding: 15px;
-#             font-family: monospace;
-#             white-space: pre-wrap;
-#         }
-#         .log-box {
-#             background: #eef7fb;
-#             border-radius: 8px;
-#             padding: 15px;
-#             font-family: monospace;
-#             white-space: pre-wrap;
-#         }
-#         a.download {
-#             display: inline-block;
-#             margin-top: 15px;
-#             background: #00b4d8;
-#             color: white;
-#             padding: 10px 20px;
-#             text-decoration: none;
-#             border-radius: 8px;
-#         }
-#         a.download:hover {
-#             background: #0077b6;
-#         }
-
-#     </style>
-# </head>
-# <body>
-#     <div class="container">
-#         <h1>📞 EMI Reminder Voice Agent</h1>
-#         <p>Upload an Excel file with columns: <b>Phone</b> and <b>Language</b>.</p>
-#         <form action="/trigger-calls" method="post" enctype="multipart/form-data">
-#             <input type="file" name="file" accept=".xlsx" required><br>
-#             <button type="submit">Trigger Calls</button>
-#         </form>
-
-#         {% if result %}
-#             <div class="output">
-#                 <h3>Logs:</h3>
-#                 <div class="log-box">{{ result | replace('\n', '<br>') | safe }}</div>
-#                 <a href="/download-report" class="download">📥 Download Call Status Excel</a>
-#             </div>
-#         {% endif %}
-#     </div>
-# </body>
-# </html>
-# """
 
 # Flask app instance
 #app = Flask(__name__)
@@ -120,15 +16,15 @@ url = "https://api.vapi.ai/call"
 VAPI_WEBHOOK_URL = "https://manappuram-voice-agent.onrender.com/vapi-webhook"
 
 # Initialize output Excel if it doesn't exist
-def initialize_output_excel():
-    if not os.path.exists(OUTPUT_EXCEL):
-        df = pd.DataFrame(columns=[
-            'name', 'phone_number', 'language', 'call_id', 'status', 
-            'duration_seconds', 'call_start_time', 'call_end_time',
-            'cost', 'error_message', 'timestamp'
-        ])
-        df.to_excel(OUTPUT_EXCEL, index=False, engine='openpyxl')
-        print(f"✓ Created new Excel file: {OUTPUT_EXCEL}")
+# def initialize_output_excel():
+#     if not os.path.exists(OUTPUT_EXCEL):
+#         df = pd.DataFrame(columns=[
+#             'name', 'phone_number', 'language', 'call_id', 'status', 
+#             'duration_seconds', 'call_start_time', 'call_end_time',
+#             'cost', 'error_message', 'timestamp'
+#         ])
+#         df.to_excel(OUTPUT_EXCEL, index=False, engine='openpyxl')
+#         print(f"✓ Created new Excel file: {OUTPUT_EXCEL}")
 
 def log_call_status(name, phone_number, language, call_id, status, duration_seconds=0, 
                     call_start_time=None, call_end_time=None, cost=None, error_message=None):
@@ -188,10 +84,10 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
     except Exception as e:
         print(f"❌ Error logging call status: {str(e)}")
         # Re-initialize the Excel file if there's an error
-        initialize_output_excel()
-        # Try again
-        log_call_status(name, phone_number, language, call_id, status, duration_seconds, 
-                       call_start_time, call_end_time, cost, error_message)
+        # initialize_output_excel()
+        # # Try again
+        # log_call_status(name, phone_number, language, call_id, status, duration_seconds, 
+        #                call_start_time, call_end_time, cost, error_message)
         
 def trigger_calls(file):
     df = pd.read_excel(file)
@@ -261,7 +157,7 @@ def trigger_calls_ui():
     if not file:
         return render_template("index.html", result="❌ No file uploaded")
     results = trigger_calls(file)
-    return render_template("index.html", result=results)
+    return render_template("index.html", result="\n".join(results))
 
 @app.route("/vapi-webhook", methods=["POST"])
 def vapi_webhook():
