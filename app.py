@@ -2,11 +2,19 @@ from flask import Flask, request, jsonify
 import pandas as pd
 from datetime import datetime
 import os
+from gradio.routes import mount_gradio_app
+import gradio as gr
+from config import messages
+import requests
 
 # Flask app instance
 app = Flask(__name__)
+API_KEY = "0a4d8aad-ddad-4a47-9484-9c64843f59ff"
+PHONE_NUMBER_ID = "80db5c92-ebf7-4bfd-afc9-615c50ada458"
 EXCEL_FILE = "vapi.xlsx"
 OUTPUT_EXCEL = "call_status_log.xlsx"
+url = "https://api.vapi.ai/call"
+VAPI_WEBHOOK_URL = "https://manappuram-voice-agent.onrender.com/vapi-webhook"
 
 # Initialize output Excel if it doesn't exist
 def initialize_output_excel():
@@ -46,6 +54,8 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
             df.at[idx, 'status'] = status
             if duration_seconds:
                 df.at[idx, 'duration_seconds'] = duration_seconds
+            if call_start_time:
+                df.at[idx, 'call_start_time'] = call_start_time
             if call_end_time:
                 df.at[idx, 'call_end_time'] = call_end_time
             if cost:
@@ -79,6 +89,63 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
         # Try again
         log_call_status(name, phone_number, language, call_id, status, duration_seconds, 
                        call_start_time, call_end_time, cost, error_message)
+        
+def trigger_calls(file):
+    df = pd.read_excel(file.name)
+    results = []
+
+    for idx, row in df.iterrows():
+        customer_number = '+' + str(row["Phone"])
+        language = row["Language"]  # "ka", "ta", "te", "ma", or "en"
+
+        # Pick Tamil/Telugu/Malayalam/Kannada/English message
+        message = messages.get(language, messages["en"])
+
+        payload = {
+            "phoneNumberId": PHONE_NUMBER_ID,
+            "customer": {"number": customer_number},
+            "assistant": {
+                "name": "EMIReminderBot",
+                "voice": {
+                    "provider": "azure",
+                    "voiceId": "zh-CN-XiaoxiaoMultilingualNeural"  # Xiaoxiao works for multiple langs
+                },
+                "model": {
+                    "provider": "openai",
+                    "model": "gpt-4o",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are an automated reminder bot. Your only task is to deliver the firstMessage and immediately end the call. Do NOT wait for user response. Do NOT engage in conversation. As soon as you finish speaking the firstMessage, immediately call the endCall function."
+                        
+                        }
+                    ],
+                    "tools": [{"type": "endCall"}],
+
+                },
+                
+                "serverUrl": "https://manappuram-voice-agent.onrender.com/vapi-webhook",
+                "firstMessage": message,
+                "silenceTimeoutSeconds": 30,
+                "endCallMessage": " ",
+                "endCallPhrases": []
+            }
+        }
+
+        headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+        response = requests.post(url, json=payload, headers=headers, verify=False)
+
+        status_code = response.status_code
+        resp_json = response.json()
+
+        # Save call status in Excel
+        df.loc[idx, "CallStatus"] = f"{status_code} | {resp_json.get('status', resp_json.get('message', 'Unknown'))}"
+
+        result = f"Called {customer_number} in {language}: {response.status_code}, {response.json()}"
+        results.append(result)
+
+    return "\n".join(results)
+
 
 @app.route("/", methods=["GET"])
 def index():
@@ -175,6 +242,32 @@ def download_report():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# Build Gradio interface
+with gr.Blocks() as demo:
+    gr.Markdown("## 📞 EMI Reminder Voice Agent")
+    gr.Markdown("Upload an Excel sheet with columns: **Phone, Language**")
+
+    file_input = gr.File(label="Upload Excel", file_types=[".xlsx"])
+    output_box = gr.Textbox(label="Logs", lines=15)
+    run_button = gr.Button("Trigger Calls")
+    download_button = gr.Button("📥 Download Call Status Report")
+    #download_link = gr.File(label="Download Updated Excel")
+
+    run_button.click(trigger_calls, inputs=file_input, outputs=output_box)
+
+    # Download from Flask endpoint
+    def get_download_link():
+        return f"{VAPI_WEBHOOK_URL.replace('/vapi-webhook', '')}/download-report"
+
+    download_link_text = gr.Textbox(label="Download Link", interactive=False)
+
+    download_button.click(fn=get_download_link, inputs=None, outputs=download_link_text)
+    gr.Markdown("After clicking the button, copy the link above or click below to download:")
+    gr.HTML(f'<a href="/download-report" target="_blank"><button style="padding:10px">Download Excel</button></a>')
+
+# Mount Gradio inside Flask
+app = mount_gradio_app(app, demo, path="/ui")
 
 # Only needed for local testing
 if __name__ == "__main__":
