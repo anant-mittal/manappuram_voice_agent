@@ -68,6 +68,13 @@ HTML_PAGE = """
             font-family: monospace;
             white-space: pre-wrap;
         }
+        .log-box {
+            background: #eef7fb;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
         a.download {
             display: inline-block;
             margin-top: 15px;
@@ -80,6 +87,7 @@ HTML_PAGE = """
         a.download:hover {
             background: #0077b6;
         }
+
     </style>
 </head>
 <body>
@@ -94,7 +102,7 @@ HTML_PAGE = """
         {% if result %}
             <div class="output">
                 <h3>Logs:</h3>
-                <pre>{{ result }}</pre>
+                <div class="log-box">{{ result | replace('\n', '<br>') | safe }}</div>
                 <a href="/download-report" class="download">📥 Download Call Status Excel</a>
             </div>
         {% endif %}
@@ -237,10 +245,10 @@ def trigger_calls(file):
         # Save call status in Excel
         df.loc[idx, "CallStatus"] = f"{status_code} | {resp_json.get('status', resp_json.get('message', 'Unknown'))}"
 
-        result = f"Called {customer_number} in {language}: {response.status_code}, {response.json()}"
+        result = f"Called {customer_number} in {language}: {response.status_code}"
         results.append(result)
 
-    return "\n".join(results)
+    return results
 
 
 @app.route("/", methods=["GET"])
