@@ -227,7 +227,7 @@ def trigger_calls(file):
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are an automated reminder bot. Your only task is to deliver the firstMessage and immediately end the call. Do NOT wait for user response. Do NOT engage in conversation. As soon as you finish speaking the firstMessage, immediately call the endCall function."
+                            "content": "You are an automated reminder bot. Your only task is to deliver the firstMessage and immediately end the call. Do NOT wait for user response. Do NOT engage in any conversation. Do NOT respond to any message from the user. As soon as you finish speaking the firstMessage, immediately call the endCall function."
                         
                         }
                     ],
