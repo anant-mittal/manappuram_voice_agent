@@ -5,6 +5,8 @@ from config import messages, language_map
 import requests
 import secrets
 from datetime import datetime, timezone, timedelta
+from threading import Thread
+import time
 
 WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
@@ -16,6 +18,9 @@ EXCEL_FILE = "vapi.xlsx"
 OUTPUT_EXCEL = "call_status_log.xlsx"
 url = "https://api.vapi.ai/call"
 VAPI_WEBHOOK_URL = "https://manappuram-voice-agent.onrender.com/vapi-webhook"
+
+# Track ongoing calls for polling
+ongoing_calls = {}  # {call_id: {'name': ..., 'phone_number': ...}}
 
 def convert_to_ist(utc_time_str):
     """Convert ISO 8601 UTC timestamp (from VAPI) to IST (UTC+5:30)."""
@@ -88,18 +93,112 @@ def log_call_status(name, phone_number, language, call_id, status, duration_seco
 
     except Exception as e:
         print(f"❌ Error logging call status: {str(e)}")
-        # Re-initialize the Excel file if there's an error
-        # initialize_output_excel()
-        # # Try again
-        # log_call_status(name, phone_number, language, call_id, status, duration_seconds, 
-        #                call_start_time, call_end_time, cost, error_message)
+
+# Function to fetch call status from Vapi API
+def fetch_call_status(call_id):
+    """Fetch call details from Vapi API"""
+    try:
+        response = requests.get(
+            f"https://api.vapi.ai/call/{call_id}",
+            headers={
+                "Authorization": f"Bearer {API_KEY}"
+            }
+        )
         
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"❌ Error fetching call {call_id}: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"❌ Exception fetching call {call_id}: {str(e)}")
+        return None
+
+# Function to poll call status until it ends
+def poll_call_status(call_id, name, phone_number, max_attempts=60, interval=5):
+    """
+    Poll Vapi API to check call status
+    max_attempts: Maximum number of polling attempts (60 * 5s = 5 minutes)
+    interval: Seconds between each poll
+    """
+    print(f"🔄 Starting to poll call {call_id} for {name}")
+    
+    for attempt in range(max_attempts):
+        time.sleep(interval)
+        
+        call_data = fetch_call_status(call_id)
+        
+        if not call_data:
+            continue
+        
+        status = call_data.get('status')
+        ended_reason = call_data.get('endedReason')
+        
+        print(f"📊 Poll {attempt + 1}/{max_attempts} - Call {call_id}: status={status}, endedReason={ended_reason}")
+        
+        # Update status in Excel
+        if status == 'ended':
+            # Call has ended, get final details
+            duration = call_data.get('duration', 0)
+            cost = call_data.get('cost', 0)
+            started_at = call_data.get('startedAt')
+            ended_at = call_data.get('endedAt')
+            
+            # Determine final status
+            if ended_reason:
+                final_status = ended_reason
+            elif duration == 0:
+                final_status = 'not-answered'
+            else:
+                final_status = 'completed'
+            
+            log_call_status(
+                name=name,
+                phone_number=phone_number,
+                call_id=call_id,
+                status=final_status,
+                duration_seconds=duration,
+                call_start_time=started_at,
+                call_end_time=ended_at,
+                cost=cost,
+                error_message=ended_reason if final_status in ['customer-did-not-answer', 'voicemail', 'customer-busy'] else None
+            )
+            
+            # Remove from ongoing calls
+            if call_id in ongoing_calls:
+                del ongoing_calls[call_id]
+            
+            print(f"✅ Call {call_id} ended: {final_status}")
+            break
+        
+        elif status in ['queued', 'ringing', 'in-progress']:
+            # Call is still ongoing, continue polling
+            log_call_status(
+                name=name,
+                phone_number=phone_number,
+                call_id=call_id,
+                status=status,
+                call_start_time=call_data.get('startedAt')
+            )
+    
+    else:
+        # Max attempts reached, mark as timeout
+        print(f"⏰ Polling timeout for call {call_id}")
+        log_call_status(
+            name=name,
+            phone_number=phone_number,
+            call_id=call_id,
+            status='polling-timeout',
+            error_message='Could not determine final call status'
+        )
+
 def trigger_calls(file):
     df = pd.read_excel(file)
     results = []
 
     for idx, row in df.iterrows():
         customer_number = '+' + str(row["Phone"])
+        name = row['Name']
         language = row["Language"]  # "ka", "ta", "te", "ma", or "en"
 
         # Pick Tamil/Telugu/Malayalam/Kannada/English message
@@ -143,8 +242,60 @@ def trigger_calls(file):
         status_code = response.status_code
         resp_json = response.json()
 
+        ## ----------------Polling logic----------------##
+        if status_code == 201:
+            call_data = response.json()
+            call_id = call_data.get('id', 'N/A')
+            
+            # Log initial call attempt
+            log_call_status(
+                name=name,
+                phone_number=customer_number,
+                call_id=call_id,
+                status='initiated',
+                duration_seconds=0,
+                call_start_time=datetime.now().isoformat()
+            )
+            
+            # Add to ongoing calls for polling
+            ongoing_calls[call_id] = {
+                'name': name,
+                'phone_number': customer_number
+            }
+            
+            # Start polling in background thread
+            poll_thread = Thread(target=poll_call_status, args=(call_id, name, customer_number))
+            poll_thread.daemon = True
+            poll_thread.start()
+            
+            # results.append({
+            #     'name': name,
+            #     'phone_number': customer_number,
+            #     'call_id': call_id,
+            #     'status': 'success'
+            # })
+            print(f"✓ Call initiated for {name} ({customer_number}) - Call ID: {call_id}")
+        else:
+            error_msg = response.text
+            log_call_status(
+                name=name,
+                phone_number=customer_number,
+                call_id='N/A',
+                status='failed',
+                error_message=error_msg
+            )
+            # results.append({
+            #     'name': name,
+            #     'phone_number': customer_number,
+            #     'status': 'failed',
+            #     'error': error_msg
+            # })
+            print(f"✗ Failed to initiate call for {name}: {error_msg}")
+
+        ##----------End of polling logic-----------
+
         # Save call status in Excel
-        df.loc[idx, "CallStatus"] = f"{status_code} | {resp_json.get('status', resp_json.get('message', 'Unknown'))}"
+        #df.loc[idx, "CallStatus"] = f"{status_code} | {resp_json.get('status', resp_json.get('message', 'Unknown'))}"
         language_name = language_map.get(language, "en")
         result = f"Called {customer_number} in {language_name}: {response.status_code}"
         results.append(result)
