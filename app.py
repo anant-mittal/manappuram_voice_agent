@@ -122,6 +122,11 @@ def poll_call_status(call_id, name, phone_number, language, max_attempts=60, int
     interval: Seconds between each poll
     """
     print(f"🔄 Starting to poll call {call_id} for {name}")
+
+    # Check at the start of each poll cycle
+    if call_id not in ongoing_calls:
+        print(f"✋ Webhook already handled call {call_id}, stopping poll")
+        return  # Exit the polling function
     
     for attempt in range(max_attempts):
         time.sleep(interval)
@@ -336,12 +341,18 @@ def vapi_webhook():
     received_secret = request.headers.get('x-vapi-secret')
     if received_secret != WEBHOOK_SECRET:
         return jsonify({"error": "Unauthorized"}), 401
+    
     data = request.json
     message = data.get('message', {})
     print("Webhook received:", data)  # log to Render logs
     # Get call details
     call = message.get('call', {})
     call_id = call.get('id', 'N/A')
+
+    if call_id in ongoing_calls:
+        del ongoing_calls[call_id]  # This stops the polling!
+        print(f"🛑 Stopped polling for call {call_id}")
+
     customer = call.get('customer', {})
     phone_number = customer.get('number', 'Unknown')
     event_type = data.get('message', {}).get('type')
