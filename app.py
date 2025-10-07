@@ -115,7 +115,7 @@ def fetch_call_status(call_id):
         return None
 
 # Function to poll call status until it ends
-def poll_call_status(call_id, name, phone_number, max_attempts=60, interval=5):
+def poll_call_status(call_id, name, phone_number, language, max_attempts=60, interval=5):
     """
     Poll Vapi API to check call status
     max_attempts: Maximum number of polling attempts (60 * 5s = 5 minutes)
@@ -141,8 +141,8 @@ def poll_call_status(call_id, name, phone_number, max_attempts=60, interval=5):
             # Call has ended, get final details
             duration = call_data.get('duration', 0)
             cost = call_data.get('cost', 0)
-            started_at = call_data.get('startedAt')
-            ended_at = call_data.get('endedAt')
+            started_at = convert_to_ist(call_data.get('startedAt'))
+            ended_at = convert_to_ist(call_data.get('endedAt'))
             
             # Determine final status
             if ended_reason:
@@ -155,6 +155,7 @@ def poll_call_status(call_id, name, phone_number, max_attempts=60, interval=5):
             log_call_status(
                 name=name,
                 phone_number=phone_number,
+                language=language,
                 call_id=call_id,
                 status=final_status,
                 duration_seconds=duration,
@@ -176,9 +177,10 @@ def poll_call_status(call_id, name, phone_number, max_attempts=60, interval=5):
             log_call_status(
                 name=name,
                 phone_number=phone_number,
+                language=language,
                 call_id=call_id,
                 status=status,
-                call_start_time=call_data.get('startedAt')
+                call_start_time=convert_to_ist(call_data.get('startedAt'))
             )
     
     else:
@@ -187,6 +189,7 @@ def poll_call_status(call_id, name, phone_number, max_attempts=60, interval=5):
         log_call_status(
             name=name,
             phone_number=phone_number,
+            language=language,
             call_id=call_id,
             status='polling-timeout',
             error_message='Could not determine final call status'
@@ -251,10 +254,11 @@ def trigger_calls(file):
             log_call_status(
                 name=name,
                 phone_number=customer_number,
+                language=language,
                 call_id=call_id,
                 status='initiated',
                 duration_seconds=0,
-                call_start_time=datetime.now().isoformat()
+                call_start_time=convert_to_ist(datetime.now().isoformat())
             )
             
             # Add to ongoing calls for polling
@@ -264,7 +268,7 @@ def trigger_calls(file):
             }
             
             # Start polling in background thread
-            poll_thread = Thread(target=poll_call_status, args=(call_id, name, customer_number))
+            poll_thread = Thread(target=poll_call_status, args=(call_id, name, customer_number, language))
             poll_thread.daemon = True
             poll_thread.start()
             
@@ -280,6 +284,7 @@ def trigger_calls(file):
             log_call_status(
                 name=name,
                 phone_number=customer_number,
+                language=language,
                 call_id='N/A',
                 status='failed',
                 error_message=error_msg
