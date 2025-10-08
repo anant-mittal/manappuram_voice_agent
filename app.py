@@ -13,7 +13,7 @@ import sendgrid
 from sendgrid.helpers.mail import Mail, Email, To, Content, Mail, Attachment, FileContent, FileName, FileType, Disposition
 import base64
 
-SENDGRID_API_KEY = "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"
+
 
 WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
@@ -213,7 +213,7 @@ def poll_call_status(call_id, name, phone_number, language, max_attempts=60, int
 def email_report_sendgrid(file_path):
     """Send the Excel report via SendGrid email."""
     try:
-        sg_api_key = SENDGRID_API_KEY
+        sg_api_key = "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"
         to_email = "anantmittal1996@gmail.com"
         from_email = "anantmittal1996@gmail.com"
 
