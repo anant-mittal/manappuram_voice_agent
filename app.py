@@ -1,3 +1,4 @@
+from typing import Dict
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
 import os
@@ -8,6 +9,8 @@ from datetime import datetime, timezone, timedelta
 from threading import Thread
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
+# import sendgrid
+# from sendgrid.helpers.email import Mail, Email, To, Content
 
 WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
@@ -22,6 +25,8 @@ VAPI_WEBHOOK_URL = "https://manappuram-voice-agent.onrender.com/vapi-webhook"
 
 # Track ongoing calls for polling
 ongoing_calls = {}  # {call_id: {'name': ..., 'phone_number': ...}}
+
+
 
 def convert_to_ist(utc_time_str):
     """Convert ISO 8601 UTC timestamp (from VAPI) to IST (UTC+5:30)."""
@@ -201,6 +206,24 @@ def poll_call_status(call_id, name, phone_number, language, max_attempts=60, int
             error_message='Could not determine final call status'
         )
 
+
+import smtplib
+from email.message import EmailMessage
+
+def email_report(file_path, to_email="anantmittal1996@gmail.com"):
+    msg = EmailMessage()
+    msg["Subject"] = "Daily Call Report"
+    msg["From"] = "imittalanant@gmail.com"
+    msg["To"] = to_email
+    msg.set_content("Attached is your daily call status report.")
+    with open(file_path, "rb") as f:
+        msg.add_attachment(f.read(), maintype="application", subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=os.path.basename(file_path))
+    with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
+        smtp.starttls()
+        smtp.login("imittalanant@gmail.com", "GAnga@$96gomti")
+        smtp.send_message(msg)
+
+
 # ======================================================
 # AUTO-DOWNLOAD REPORT
 # ======================================================
@@ -211,6 +234,7 @@ def auto_download_report():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     new_name = f"call_status_log_{timestamp}.xlsx"
     os.system(f"cp {OUTPUT_EXCEL} {new_name}")
+    email_report(new_name)
     print(f"📂 Auto-saved report as {new_name}")
 
 
