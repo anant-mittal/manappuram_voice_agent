@@ -213,9 +213,9 @@ def poll_call_status(call_id, name, phone_number, language, max_attempts=60, int
 def email_report_sendgrid(file_path):
     """Send the Excel report via SendGrid email."""
     try:
-        sg_api_key = "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"
-        to_email = "anantmittal1996@gmail.com"
-        from_email = "anantmittal1996@gmail.com"
+        sg_api_key = ""
+        to_email = ""
+        from_email = ""
 
         if not all([sg_api_key, to_email, from_email]):
             print("⚠️ Missing SendGrid environment variables. Email not sent.")
@@ -384,7 +384,7 @@ def trigger_calls(file):
         results.append(result)
     print("⏳ Waiting for webhooks (0.5 min)...")
     time.sleep(30)
-    auto_download_report()
+    #auto_download_report()
     return results
 
 # ======================================================
