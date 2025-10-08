@@ -9,8 +9,11 @@ from datetime import datetime, timezone, timedelta
 from threading import Thread
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
-# import sendgrid
-# from sendgrid.helpers.email import Mail, Email, To, Content
+import sendgrid
+from sendgrid.helpers.mail import Mail, Email, To, Content, Mail, Attachment, FileContent, FileName, FileType, Disposition
+import base64
+
+SENDGRID_API_KEY = "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"
 
 WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
@@ -207,21 +210,52 @@ def poll_call_status(call_id, name, phone_number, language, max_attempts=60, int
         )
 
 
-import smtplib
-from email.message import EmailMessage
+def email_report_sendgrid(file_path):
+    """Send the Excel report via SendGrid email."""
+    try:
+        sg_api_key = SENDGRID_API_KEY
+        to_email = "anantmittal1996@gmail.com"
+        from_email = "anantmittal1996@gmail.com"
 
-def email_report(file_path, to_email="anantmittal1996@gmail.com"):
-    msg = EmailMessage()
-    msg["Subject"] = "Daily Call Report"
-    msg["From"] = "imittalanant@gmail.com"
-    msg["To"] = to_email
-    msg.set_content("Attached is your daily call status report.")
-    with open(file_path, "rb") as f:
-        msg.add_attachment(f.read(), maintype="application", subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=os.path.basename(file_path))
-    with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-        smtp.starttls()
-        smtp.login("imittalanant@gmail.com", "GAnga@$96gomti")
-        smtp.send_message(msg)
+        if not all([sg_api_key, to_email, from_email]):
+            print("⚠️ Missing SendGrid environment variables. Email not sent.")
+            return
+
+        if not os.path.exists(file_path):
+            print(f"⚠️ Report file not found: {file_path}")
+            return
+
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+            encoded_file = base64.b64encode(file_data).decode()
+
+        # Create email
+        message = Mail(
+            from_email=from_email,
+            to_emails=to_email,
+            subject="📊 Daily VAPI Call Report",
+            html_content="<p>Attached is the latest VAPI call status report.</p>"
+        )
+
+        attachment = Attachment()
+        attachment.file_content = FileContent(encoded_file)
+        attachment.file_type = FileType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        attachment.file_name = FileName(os.path.basename(file_path))
+        attachment.disposition = Disposition("attachment")
+        message.attachment = attachment
+
+        sg = sendgrid.SendGridAPIClient(api_key=sg_api_key)
+        response = sg.send(message)
+
+        if response.status_code in [200, 202]:
+            print(f"📧 Report emailed successfully to {to_email}")
+        else:
+            print(f"❌ SendGrid failed: {response.status_code} - {response.body}")
+
+    except Exception as e:
+        print(f"❌ Error sending email via SendGrid: {str(e)}")
+
+
 
 
 # ======================================================
@@ -233,8 +267,9 @@ def auto_download_report():
         return
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     new_name = f"call_status_log_{timestamp}.xlsx"
+    print('New name = ', new_name)
     os.system(f"cp {OUTPUT_EXCEL} {new_name}")
-    email_report(new_name)
+    email_report_sendgrid(new_name)
     print(f"📂 Auto-saved report as {new_name}")
 
 
@@ -347,8 +382,8 @@ def trigger_calls(file):
         language_name = language_map.get(language, "en")
         result = f"Called {customer_number} in {language_name}: {response.status_code}"
         results.append(result)
-    print("⏳ Waiting for webhooks (2 min)...")
-    time.sleep(120)
+    print("⏳ Waiting for webhooks (0.5 min)...")
+    time.sleep(30)
     auto_download_report()
     return results
 
@@ -365,7 +400,7 @@ def scheduled_trigger():
         print(f"❌ Scheduled trigger failed: {e}")
 
 # Default: 10:00 AM IST daily
-scheduler.add_job(scheduled_trigger, 'cron', hour=12, minute=28, id='daily_call_job')
+scheduler.add_job(scheduled_trigger, 'cron', hour=13, minute=5, id='daily_call_job')
 scheduler.start()
 
 
