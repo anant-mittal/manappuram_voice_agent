@@ -400,7 +400,7 @@ def scheduled_trigger():
         print(f"❌ Scheduled trigger failed: {e}")
 
 # Default: 10:00 AM IST daily
-scheduler.add_job(scheduled_trigger, 'cron', hour=13, minute=5, id='daily_call_job')
+scheduler.add_job(scheduled_trigger, 'cron', hour=13, minute=15, id='daily_call_job')
 scheduler.start()
 
 
