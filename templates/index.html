@@ -37,7 +37,11 @@
         }
 
         function showTimeBox() {
-            document.getElementById('timeBox').style.display = 'block';
+            console.log("showTimeBox called");
+            const timeBox = document.getElementById('timeBox');
+            console.log("timeBox element:", timeBox);
+            timeBox.style.display = 'block';
+            console.log("Display changed to block");
         }
 
         async function scheduleCall() {
