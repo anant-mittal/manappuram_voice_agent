@@ -7,6 +7,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 from threading import Thread
 import time
+from apscheduler.schedulers.background import BackgroundScheduler
 
 WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
@@ -200,6 +201,19 @@ def poll_call_status(call_id, name, phone_number, language, max_attempts=60, int
             error_message='Could not determine final call status'
         )
 
+# ======================================================
+# AUTO-DOWNLOAD REPORT
+# ======================================================
+def auto_download_report():
+    if not os.path.exists(OUTPUT_EXCEL):
+        print("⚠️ No call status log found yet.")
+        return
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    new_name = f"call_status_log_{timestamp}.xlsx"
+    os.system(f"cp {OUTPUT_EXCEL} {new_name}")
+    print(f"📂 Auto-saved report as {new_name}")
+
+
 def trigger_calls(file):
     df = pd.read_excel(file)
     results = []
@@ -309,8 +323,54 @@ def trigger_calls(file):
         language_name = language_map.get(language, "en")
         result = f"Called {customer_number} in {language_name}: {response.status_code}"
         results.append(result)
-
+    print("⏳ Waiting for webhooks (2 min)...")
+    time.sleep(120)
+    auto_download_report()
     return results
+
+# ======================================================
+# SCHEDULER SETUP
+# ======================================================
+scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
+
+def scheduled_trigger():
+    print(f"🚀 Scheduled trigger running at {datetime.now()}")
+    try:
+        trigger_calls(EXCEL_FILE)
+    except Exception as e:
+        print(f"❌ Scheduled trigger failed: {e}")
+
+# Default: 10:00 AM IST daily
+scheduler.add_job(scheduled_trigger, 'cron', hour=11, minute=5, id='daily_call_job')
+scheduler.start()
+
+
+# ======================================================
+# DYNAMIC SCHEDULING API
+# ======================================================
+@app.route("/schedule-call", methods=["POST"])
+def schedule_call():
+    """Set a new daily schedule for outbound calls."""
+    try:
+        data = request.json or {}
+        hour = int(data.get("hour", 10))
+        minute = int(data.get("minute", 0))
+
+        # Remove existing job if present
+        if scheduler.get_job("daily_call_job"):
+            scheduler.remove_job("daily_call_job")
+
+        # Add new job
+        scheduler.add_job(scheduled_trigger, 'cron', hour=hour, minute=minute, id="daily_call_job")
+        next_run = scheduler.get_job("daily_call_job").next_run_time
+
+        return jsonify({
+            "message": f"✅ Daily call schedule updated to {hour:02d}:{minute:02d} IST",
+            "next_run": str(next_run)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 
 
 @app.route("/", methods=["GET"])
