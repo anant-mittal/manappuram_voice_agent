@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -20,6 +20,76 @@
                 <div class="log-box">{{ result | replace('\n', '<br>') | safe }}</div>
                 <a href="/download-report" class="download">📥 Download Call Status Excel</a>
             </div>
+        {% endif %}
+    </div>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📞 EMI Reminder Voice Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        function enableScheduleButton() {
+            document.getElementById('scheduleBtn').disabled = false;
+        }
+
+        function showTimeBox() {
+            document.getElementById('timeBox').style.display = 'block';
+        }
+
+        async function scheduleCall() {
+            const timeInput = document.getElementById('scheduleTime').value;
+            if (!timeInput) {
+                alert("Please select a time first!");
+                return;
+            }
+
+            const [hour, minute] = timeInput.split(':').map(Number);
+            try {
+                const res = await fetch(`/schedule-call?hour=${hour}&minute=${minute}`);
+                const data = await res.json();
+
+                document.getElementById('message').innerHTML = 
+                    `✅ ${data.message}<br>📧 The status report will be sent to your email.`;
+
+                // Disable download button if scheduled
+                const downloadBtn = document.getElementById('downloadBtn');
+                if (downloadBtn) downloadBtn.classList.add('disabled');
+            } catch (err) {
+                alert("❌ Failed to schedule calls: " + err.message);
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>📞 EMI Reminder Voice Agent</h1>
+        <p>Upload an Excel file with columns: <b>Name,</b> <b>Phone</b> and <b>Language</b>.</p>
+
+        <form id="uploadForm" action="/trigger-calls" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".xlsx" required onchange="enableScheduleButton()"><br>
+            <button type="submit">Trigger Calls</button>
+        </form>
+
+        <button id="scheduleBtn" onclick="showTimeBox()" disabled>📅 Schedule Calls</button>
+
+        <div id="timeBox" style="display:none; margin-top:20px;">
+            <label for="scheduleTime"><b>Select Time (IST):</b></label><br>
+            <input type="time" id="scheduleTime" required>
+            <button onclick="scheduleCall()">Confirm Schedule</button>
+        </div>
+
+        <div id="message" style="margin-top:20px; color:green; font-weight:bold;"></div>
+
+        {% if result %}
+        <div class="output">
+            <h3>Logs:</h3>
+            <div class="log-box">{{ result | replace('\n', '<br>') | safe }}</div>
+            <a id="downloadBtn" href="/download-report" class="download">📥 Download Call Status Excel</a>
+        </div>
         {% endif %}
     </div>
 </body>
