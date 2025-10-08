@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "apscheduler>=3.11.0",
+    "dotenv>=0.9.9",
     "flask>=3.1.2",
     "gradio>=5.47.2",
     "openpyxl>=3.1.5",

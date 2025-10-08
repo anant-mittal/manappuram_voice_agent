@@ -12,15 +12,21 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import sendgrid
 from sendgrid.helpers.mail import Mail, Email, To, Content, Mail, Attachment, FileContent, FileName, FileType, Disposition
 import base64
+import os
+from dotenv import load_dotenv
 
+# Load .env only if it exists (i.e., in local development)
+if os.path.exists(".env"):
+    load_dotenv()
+    print("Loaded environment variables from .env")
+else:
+    print("Running in Render environment — using system environment variables")
 
 
 WEBHOOK_SECRET = secrets.token_urlsafe(32)
 # Flask app instance
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
-API_KEY = "0a4d8aad-ddad-4a47-9484-9c64843f59ff"
-PHONE_NUMBER_ID = "80db5c92-ebf7-4bfd-afc9-615c50ada458"
 EXCEL_FILE = "vapi.xlsx"
 OUTPUT_EXCEL = "call_status_log.xlsx"
 url = "https://api.vapi.ai/call"
@@ -110,7 +116,7 @@ def fetch_call_status(call_id):
         response = requests.get(
             f"https://api.vapi.ai/call/{call_id}",
             headers={
-                "Authorization": f"Bearer {API_KEY}"
+                "Authorization": f"Bearer {os.getenv("VAPI_API_KEY")}"
             }
         )
         
@@ -213,9 +219,9 @@ def poll_call_status(call_id, name, phone_number, language, max_attempts=60, int
 def email_report_sendgrid(file_path):
     """Send the Excel report via SendGrid email."""
     try:
-        sg_api_key = ""
-        to_email = ""
-        from_email = ""
+        sg_api_key = os.getenv("SENDGRID_API_KEY")
+        to_email = "anantmittal1996@gmail.com"
+        from_email = "anantmittal1996@gmail.com"
 
         if not all([sg_api_key, to_email, from_email]):
             print("⚠️ Missing SendGrid environment variables. Email not sent.")
@@ -286,7 +292,7 @@ def trigger_calls(file):
         message = messages.get(language, messages["en"])
 
         payload = {
-            "phoneNumberId": PHONE_NUMBER_ID,
+            "phoneNumberId": os.getenv("PHONE_NUMBER_ID"),
             "customer": {"number": customer_number},
             "assistant": {
                 "name": "EMIReminderBot",
@@ -317,7 +323,7 @@ def trigger_calls(file):
             }
         }
 
-        headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {os.getenv("VAPI_API_KEY")}", "Content-Type": "application/json"}
         response = requests.post(url, json=payload, headers=headers, verify=False)
 
         status_code = response.status_code
@@ -382,53 +388,53 @@ def trigger_calls(file):
         language_name = language_map.get(language, "en")
         result = f"Called {customer_number} in {language_name}: {response.status_code}"
         results.append(result)
-    # print("⏳ Waiting for webhooks (0.5 min)...")
-    # time.sleep(30)
-    #auto_download_report()
+    print("⏳ Waiting for webhooks (0.5 min)...")
+    time.sleep(30)
+    auto_download_report()
     return results
 
-# # ======================================================
-# # SCHEDULER SETUP
-# # ======================================================
-# scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
+# ======================================================
+# SCHEDULER SETUP
+# ======================================================
+scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
 
-# def scheduled_trigger():
-#     print(f"Scheduled trigger running at {datetime.now()}")
-#     try:
-#         trigger_calls(EXCEL_FILE)
-#     except Exception as e:
-#         print(f"Scheduled trigger failed: {e}")
+def scheduled_trigger():
+    print(f"Scheduled trigger running at {datetime.now()}")
+    try:
+        trigger_calls(EXCEL_FILE)
+    except Exception as e:
+        print(f"Scheduled trigger failed: {e}")
 
-# # Default: 10:00 AM IST daily
-# scheduler.add_job(scheduled_trigger, 'cron', hour=13, minute=30, id='daily_call_job')
-# scheduler.start()
+# Default: 10:00 AM IST daily
+scheduler.add_job(scheduled_trigger, 'cron', hour=18, minute=40, id='daily_call_job')
+scheduler.start()
 
 
 # ======================================================
 # DYNAMIC SCHEDULING API
 # ======================================================
-# @app.route("/schedule-call", methods=["POST"])
-# def schedule_call():
-#     """Set a new daily schedule for outbound calls."""
-#     try:
-#         data = request.json or {}
-#         hour = int(data.get("hour", 10))
-#         minute = int(data.get("minute", 0))
+@app.route("/schedule-call", methods=["POST"])
+def schedule_call():
+    """Set a new daily schedule for outbound calls."""
+    try:
+        data = request.json or {}
+        hour = int(data.get("hour", 10))
+        minute = int(data.get("minute", 0))
 
-#         # Remove existing job if present
-#         if scheduler.get_job("daily_call_job"):
-#             scheduler.remove_job("daily_call_job")
+        # Remove existing job if present
+        if scheduler.get_job("daily_call_job"):
+            scheduler.remove_job("daily_call_job")
 
-#         # Add new job
-#         scheduler.add_job(scheduled_trigger, 'cron', hour=hour, minute=minute, id="daily_call_job")
-#         next_run = scheduler.get_job("daily_call_job").next_run_time
+        # Add new job
+        scheduler.add_job(scheduled_trigger, 'cron', hour=hour, minute=minute, id="daily_call_job")
+        next_run = scheduler.get_job("daily_call_job").next_run_time
 
-#         return jsonify({
-#             "message": f"✅ Daily call schedule updated to {hour:02d}:{minute:02d} IST",
-#             "next_run": str(next_run)
-#         }), 200
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "message": f"✅ Daily call schedule updated to {hour:02d}:{minute:02d} IST",
+            "next_run": str(next_run)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 
 
