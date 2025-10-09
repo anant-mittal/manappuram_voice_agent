@@ -282,7 +282,8 @@ def auto_download_report():
 def trigger_calls(file):
     df = pd.read_excel(file)
     results = []
-
+    if os.path.exists(OUTPUT_EXCEL):
+        os.remove(OUTPUT_EXCEL)
     for idx, row in df.iterrows():
         customer_number = '+' + str(row["Phone"])
         name = row['Name']

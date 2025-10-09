@@ -268,10 +268,14 @@
             const timeBox = document.getElementById('timeBox');
             const scheduleBtn = document.getElementById('scheduleBtn');
             const downloadSection = document.getElementById('downloadSection');
-            
+            const message = document.getElementById('message')
+
             if (timeBox.style.display === 'none' || timeBox.style.display === '') {
                 timeBox.style.display = 'block';
                 scheduleBtn.textContent = '❌ Cancel Schedule';
+                if (message) {
+                    message.style.display = 'none'
+                }
                 if (downloadSection) {
                     downloadSection.style.display = 'none';
                 }
@@ -299,7 +303,6 @@
             try {
                 const res = await fetch(`/schedule-call?hour=${hour}&minute=${minute}`);
                 const data = await res.json();
-
                 const downloadSection = document.getElementById('downloadSection');
                 if (downloadSection) {
                     downloadSection.style.display = 'none';
@@ -349,7 +352,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    document.getElementById('message').innerHTML = `✅ ${data.message}`;
+                    document.getElementById('message').innerHTML = `✅ ${data.message}`; 
                     document.getElementById('message').className = 'message-box success';
                     
                     // Show download button after a delay
