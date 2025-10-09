@@ -59,9 +59,15 @@
                 document.getElementById('message').innerHTML = 
                     `✅ ${data.message}<br>📧 The status report will be sent to your email.`;
 
-                // Disable download button if scheduled
-                const downloadBtn = document.getElementById('downloadBtn');
-                if (downloadBtn) downloadBtn.classList.add('disabled');
+                // // Disable download button if scheduled
+                // const downloadBtn = document.getElementById('downloadBtn');
+                // if (downloadBtn) downloadBtn.classList.add('disabled');
+                // ✅ Hide logs and download section when scheduling
+                const outputDiv = document.querySelector('.output');
+                if (outputDiv) {
+                    outputDiv.style.display = 'none';
+                }
+
             } catch (err) {
                 alert("❌ Failed to schedule calls: " + err.message);
             }
