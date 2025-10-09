@@ -267,10 +267,14 @@
         function showTimeBox() {
             const timeBox = document.getElementById('timeBox');
             const scheduleBtn = document.getElementById('scheduleBtn');
+            const downloadSection = document.getElementById('downloadSection');
             
             if (timeBox.style.display === 'none' || timeBox.style.display === '') {
                 timeBox.style.display = 'block';
                 scheduleBtn.textContent = '❌ Cancel Schedule';
+                if (downloadSection) {
+                    downloadSection.style.display = 'none';
+                }
             } else {
                 timeBox.style.display = 'none';
                 scheduleBtn.textContent = '📅 Schedule Calls';
@@ -278,11 +282,6 @@
         }
 
         async function scheduleCall() {
-            const downloadSection = document.getElementById('downloadSection');
-            if (downloadSection) {
-                downloadSection.style.display = 'none';
-            }
-
             const timeInput = document.getElementById('scheduleTime').value;
             if (!timeInput) {
                 alert("Please select a time first!");
@@ -300,6 +299,11 @@
             try {
                 const res = await fetch(`/schedule-call?hour=${hour}&minute=${minute}`);
                 const data = await res.json();
+
+                const downloadSection = document.getElementById('downloadSection');
+                if (downloadSection) {
+                    downloadSection.style.display = 'none';
+                }
 
                 document.getElementById('message').innerHTML = 
                     `✅ ${data.message}<br>📧 The status report will be sent to your email.`;
