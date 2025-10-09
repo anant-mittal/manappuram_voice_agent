@@ -462,7 +462,7 @@ def index():
 def trigger_calls_ui():
     file = request.files.get("file")
     if not file:
-        return render_template("index.html", result="❌ No file uploaded")
+        return jsonify({"error": "No file uploaded"}), 400
     
     # ✅ Remove old call log
     if os.path.exists(OUTPUT_EXCEL):
@@ -476,7 +476,10 @@ def trigger_calls_ui():
     # print('Result of trigger calls api ', results)
     # return render_template("index.html", result="\n".join(results))
     Thread(target=trigger_calls, args=(EXCEL_FILE,)).start()
-    return render_template("index.html", result="🚀 Calls triggered in background...")
+    #return render_template("index.html", result="🚀 Calls triggered in background...")
+    return jsonify({
+        "message": "🚀 Calls triggered in background!"
+    }), 200
 
 @app.route("/vapi-webhook", methods=["POST"])
 def vapi_webhook():

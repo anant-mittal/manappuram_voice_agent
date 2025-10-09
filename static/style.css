@@ -69,6 +69,296 @@ a.download:hover {
 
 
 
+/* * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    width: 90%;
+    max-width: 800px;
+    margin: 40px auto;
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+    text-align: center;
+    color: #667eea;
+    margin-bottom: 10px;
+    font-size: 2em;
+}
+
+.subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 0.95em;
+}
+
+.upload-section {
+    background: #f8f9ff;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+
+.file-input-wrapper {
+    position: relative;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    left: -9999px;
+}
+
+.file-label {
+    display: inline-block;
+    padding: 12px 30px;
+    background: white;
+    border: 2px dashed #667eea;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #667eea;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.file-label:hover {
+    background: #667eea;
+    color: white;
+    border-style: solid;
+}
+
+.file-name {
+    display: none;
+    margin-top: 10px;
+    color: #28a745;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+
+.btn {
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+}
+
+.btn-confirm {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    margin-top: 15px;
+}
+
+.btn-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+}
+
+.btn-download {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+    margin-top: 20px;
+}
+
+.btn-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(67, 233, 123, 0.4);
+}
+
+.time-box {
+    display: none;
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 12px;
+    padding: 25px;
+    margin: 20px 0;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.time-box h3 {
+    color: #856404;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.time-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.time-input-group label {
+    font-weight: 600;
+    color: #856404;
+}
+
+.time-input-group input[type="time"] {
+    padding: 10px 15px;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    font-size: 16px;
+    width: 200px;
+    text-align: center;
+}
+
+.message-box {
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    animation: fadeIn 0.5s ease;
+}
+
+.message-box:empty {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.output {
+    margin-top: 30px;
+    background: #e8f5e9;
+    border-radius: 12px;
+    padding: 25px;
+    animation: fadeIn 0.5s ease;
+}
+
+.output h3 {
+    color: #2e7d32;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.log-box {
+    background: white;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #1b5e20;
+}
+
+.log-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-box::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.log-box::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.log-box::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 25px;
+    }
+
+    h1 {
+        font-size: 1.5em;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .upload-section {
+        padding: 20px;
+    }
+} */
+
 * {
     margin: 0;
     padding: 0;
@@ -284,6 +574,18 @@ h1 {
     display: none;
 }
 
+.message-box.success {
+    background: #d4edda;
+    border: 2px solid #28a745;
+    color: #155724;
+}
+
+.message-box.error {
+    background: #f8d7da;
+    border: 2px solid #dc3545;
+    color: #721c24;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -293,52 +595,24 @@ h1 {
     }
 }
 
-/* Output Section */
-.output {
+/* Download Section */
+.download-section {
     margin-top: 30px;
     background: #e8f5e9;
     border-radius: 12px;
     padding: 25px;
+    text-align: center;
     animation: fadeIn 0.5s ease;
 }
 
-.output h3 {
+.download-section h3 {
     color: #2e7d32;
-    margin-bottom: 15px;
-    text-align: center;
+    margin-bottom: 10px;
 }
 
-.log-box {
-    background: white;
-    border: 1px solid #c8e6c9;
-    border-radius: 8px;
-    padding: 20px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-    max-height: 400px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+.download-section p {
     color: #1b5e20;
-}
-
-/* Scrollbar Styling */
-.log-box::-webkit-scrollbar {
-    width: 8px;
-}
-
-.log-box::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.log-box::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-.log-box::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    margin-bottom: 15px;
 }
 
 /* Responsive Design */
