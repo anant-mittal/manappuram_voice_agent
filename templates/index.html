@@ -274,7 +274,8 @@
                 timeBox.style.display = 'block';
                 scheduleBtn.textContent = '❌ Cancel Schedule';
                 if (message) {
-                    message.style.display = 'none'
+                    messageBox.innerHTML = '';
+                    messageBox.className = 'message-box';
                 }
                 if (downloadSection) {
                     downloadSection.style.display = 'none';
