@@ -53,6 +53,13 @@
 
             const [hour, minute] = timeInput.split(':').map(Number);
             try {
+
+                // ✅ Hide output section BEFORE making the API call
+                const outputDiv = document.querySelector('.output');
+                if (outputDiv) {
+                    outputDiv.style.display = 'none';
+                }
+
                 const res = await fetch(`/schedule-call?hour=${hour}&minute=${minute}`);
                 const data = await res.json();
 
@@ -63,10 +70,10 @@
                 // const downloadBtn = document.getElementById('downloadBtn');
                 // if (downloadBtn) downloadBtn.classList.add('disabled');
                 // ✅ Hide logs and download section when scheduling
-                const outputDiv = document.querySelector('.output');
-                if (outputDiv) {
-                    outputDiv.style.display = 'none';
-                }
+                // const outputDiv = document.querySelector('.output');
+                // if (outputDiv) {
+                //     outputDiv.style.display = 'none';
+                // }
 
             } catch (err) {
                 alert("❌ Failed to schedule calls: " + err.message);
