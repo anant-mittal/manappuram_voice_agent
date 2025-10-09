@@ -278,7 +278,11 @@
         }
 
         async function scheduleCall() {
-            
+            const downloadSection = document.getElementById('downloadSection');
+            if (downloadSection) {
+                downloadSection.style.display = 'none';
+            }
+
             const timeInput = document.getElementById('scheduleTime').value;
             if (!timeInput) {
                 alert("Please select a time first!");
